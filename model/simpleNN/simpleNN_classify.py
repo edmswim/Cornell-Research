@@ -25,30 +25,7 @@ def simple_NN_classification_participant_dependent(csv, trainingid, validationid
     Y_test = []
 
     for i in range(totalDays - 1, len(csv)):
-        days = []
-        if totalDays >= 1:
-            days = np.array([csv[i]])
-
-        if totalDays >= 2:
-            days = np.append(days, [csv[i-1]], axis=0)
-
-        if totalDays >= 3:
-            days = np.append(days, [csv[i-2]], axis=0)
-
-        if totalDays >= 4:
-            days = np.append(days, [csv[i-3]], axis=0)
-
-        if totalDays >= 5:
-            days = np.append(days, [csv[i-4]], axis=0)
-
-        if totalDays >= 6:
-            days = np.append(days, [csv[i-5]], axis=0)
-
-        if totalDays >= 7:
-            days = np.append(days, [csv[i-6]], axis=0)
-
-        if totalDays >= 8:
-            days = np.append(days, [csv[i-7]], axis=0)
+        days = model_utilities.collectDayData(csv, i, totalDays)
 
         if model_utilities.isSameUserAcross(days):
             x = model_utilities.transform_into_x_feature(
@@ -134,30 +111,7 @@ def simple_NN_classification_participant_independent(csv, maximum, minimum, tota
 
 
     for i in range(totalDays - 1, len(csv)):
-        days = []
-        if totalDays >= 1:
-            days = np.array([csv[i]])
-
-        if totalDays >= 2:
-            days = np.append(days, [csv[i-1]], axis=0)
-
-        if totalDays >= 3:
-            days = np.append(days, [csv[i-2]], axis=0)
-
-        if totalDays >= 4:
-            days = np.append(days, [csv[i-3]], axis=0)
-
-        if totalDays >= 5:
-            days = np.append(days, [csv[i-4]], axis=0)
-
-        if totalDays >= 6:
-            days = np.append(days, [csv[i-5]], axis=0)
-
-        if totalDays >= 7:
-            days = np.append(days, [csv[i-6]], axis=0)
-
-        if totalDays >= 8:
-            days = np.append(days, [csv[i-7]], axis=0)
+        days = model_utilities.collectDayData(csv, i, totalDays)
 
         if model_utilities.isSameUserAcross(days):
             x = model_utilities.transform_into_x_feature(

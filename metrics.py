@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def confusionMetric(preds, truths):
     ret1 = np.zeros((4,4))
     ret2 = np.zeros((4,4))
@@ -54,7 +53,7 @@ def confusionMetric(preds, truths):
     print(ret2)
 
 
-
+#for classification task
 def calculate_accuracy(preds, truths):
     print("Number of Predictions: " + str(len(preds)))
     numberCorrect = 0
@@ -65,3 +64,12 @@ def calculate_accuracy(preds, truths):
     return (numberCorrect / float(len(preds)))
 
 
+#for regression task
+def calculate_mean_squared_error(preds, truths):
+    mse = 0
+    for i in range(0, len(preds)):
+        diff = preds[i] - truths[i]
+        mse += (diff * diff)
+
+    print("Mean Squared Error: " + str(mse / float(len(preds))))
+    return (mse / float(len(preds)))

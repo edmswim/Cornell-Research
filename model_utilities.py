@@ -1,9 +1,48 @@
 import numpy as np
 import math
-from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.feature_selection import chi2
 
+import keras
+
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.feature_selection import RFE
+from sklearn.linear_model import LogisticRegression
+
+# collects features of current day/previous days
+def collectDayData(csv, index, totalDays):
+    days = []
+
+    if totalDays >= 1:
+        days = np.array([csv[index]])
+
+    if totalDays >= 2:
+        days = np.append(days, [csv[index-1]], axis=0)
+
+    if totalDays >= 3:
+        days = np.append(days, [csv[index-2]], axis=0)
+
+    if totalDays >= 4:
+        days = np.append(days, [csv[index-3]], axis=0)
+
+    if totalDays >= 5:
+        days = np.append(days, [csv[index-4]], axis=0)
+
+    if totalDays >= 6:
+        days = np.append(days, [csv[index-5]], axis=0)
+
+    if totalDays >= 7:
+        days = np.append(days, [csv[index-6]], axis=0)
+
+    if totalDays >= 8:
+        days = np.append(days, [csv[index-7]], axis=0)
+
+    return days
+
+
+# converts into a final feature vector for the model to train on
 def transform_into_x_feature(daysData, isFlatten, modelType, numDays, maximum, minimum):
+
     if daysData.shape[0] >= 1:
         curr = daysData[0]
     else:
@@ -63,6 +102,9 @@ def transform_into_x_feature(daysData, isFlatten, modelType, numDays, maximum, m
         if seven_prev is not None:
             x_seven_prev = np.concatenate((seven_prev[33:93], seven_prev[132:]))
 
+        minimum_vec = np.concatenate((minimum[33:93],minimum[132:]))
+        maximum_vec = np.concatenate((maximum[33:93],maximum[132:]))
+
     elif modelType == "SVM":
         if curr is not None:
             x_curr = np.concatenate((curr[33:93], curr[132:]))
@@ -81,138 +123,186 @@ def transform_into_x_feature(daysData, isFlatten, modelType, numDays, maximum, m
         if seven_prev is not None:
             x_seven_prev = np.concatenate((seven_prev[33:93], seven_prev[132:]))
 
+        minimum_vec = np.concatenate((minimum[33:93],minimum[132:]))
+        maximum_vec = np.concatenate((maximum[33:93],maximum[132:]))
+
     elif modelType == "LSTM":
 
-        #f = np.array([145, 53, 54, 149, 33, 57, 148, 146, 35, 56, 147, 68, 55, 70, 44, 47, 37, 87, 36, 83, 71, 72, 45, 43, 34, 84, 49, 46, 50, 85, 51, 69, 52, 48, 86, 150, 140, 154, 58, 152, 153, 143, 151, 141, 136, 138, 60, 59, 137, 88, 90, 62, 139, 73, 144, 134, 77, 133, 74, 76, 92, 132, 91])
 
-        #f = np.array([37, 89, 61, 54, 149, 68, 135, 142, 75, 145, 53, 33, 57, 148, 146, 35, 56, 147, 55, 70, 44, 47, 87, 36, 83, 71, 72, 45, 43, 34, 84, 49, 46, 50, 85, 51, 69, 52, 48, 86])
+        # TRYING TO DO FEATURE SELECTION
+        '''
+        select_features = np.array([
+            58,
+            35,
+            70,
+            53,
+            59,
+            15,
+            60,
+            13,
+            68,
+            47,
+            145,
+            150,
+            131,
+            43,
+            61,
+            73,
+            23,
+            149,
+            89,
+            57,
+            33,
+            148,
+            154,
+            152,
+            56,
+            16,
+            142,
+            90,
+            51,
+            44,
+            25,
+            48,
+            62,
+            46,
+            9,
+            143,
+            77,
+            153,
+            50,
+            54,
+            71,
+            140,
+            84,
+            45,
+            136,
+            87,
+            26,
+            75,
+            141,
+            138,
+            14,
+            135,
+            49,
+            63,
+            52,
+            132,
+            27,
+            88,
+            67,
+            147,
+            3,
+            137,
+            72,
+            129,
+            130,
+            65,
+            24,
+            83,
+            64,
+            55,
+            36,
+            124,
+            76,
+            146,
+            151,
+            7,
+            85,
+            118,
+            5,
+            4,
+            34,
+            125,
+            74,
+            121,
+            66,
+            17,
+            109,
+            122,
+            37,
+            114,
+            139,
+            69,
+            6,
+            133,
+            144,
+            107,
+            128,
+            86,
+            127,
+            92,
+            123,
+            126,
+            112,
+            134,
+            119,
+            8,
+            113,
+            10,
+            111,
+            11,
+            29,
+            110,
+            117,
+            91,
+            30,
+            115,
+            116,
+            12,
+            31,
+            32,
+            108,
+            28,
+            120
+        ])
 
-        # f = np.array([
-        #     114,
-        #     115,
-        #     112,
-        #     116,
-        #     117,
-        #     118,
-        #     121,
-        #     119,
-        #     145,
-        #     53,
-        #     120,
-        #     13,
-        #     113,
-        #     54,
-        #     149,
-        #     33,
-        #     57,
-        #     148,
-        #     3,
-        #     146,
-        #     15,
-        #     35,
-        #     56,
-        #     147,
-        #     68,
-        #     16,
-        #     7,
-        #     55,
-        #     4,
-        #     70,
-        #     14,
-        #     44,
-        #     47,
-        #     17,
-        #     23,
-        #     37,
-        #     5,
-        #     87,
-        #     36,
-        #     83,
-        #     71,
-        #     72,
-        #     45,
-        #     43,
-        #     34,
-        #     109,
-        #     84,
-        #     49,
-        #     46,
-        #     6,
-        #     50,
-        #     26,
-        #     25,
-        #     85,
-        #     29,
-        #     27,
-        #     51,
-        #     69,
-        #     8,
-        #     52,
-        #     48,
-        #     30,
-        #     11,
-        #     110,
-        #     86,
-        #     10,
-        #     107,
-        #     9,
-        #     28,
-        #     24,
-        #     32,
-        #     31,
-        #     150,
-        #     12,
-        #     140,
-        #     154,
-        #     58,
-        #     152,
-        #     135,
-        #     153,
-        #     111,
-        #     143,
-        #     151,
-        #     142,
-        #     141,
-        #     136,
-        #     138,
-        #     60
-        # ])
+        features_curr = []
+        features_one_prev = []
+        features_two_prev = []
+        features_three_prev = []
+        features_four_prev = []
+        features_five_prev = []
+        features_six_prev = []
+        features_seven_prev = []
 
+        minimum_vec = []
+        maximum_vec = []
 
-        # features_curr = []
-        # for idx in f:
-        #     features_curr = np.append(features_curr, curr[idx])
+        for i in range(0, 100):
+            feat_idx = select_features[i]
 
-        # features_one_prev = []
-        # for idx in f:
-        #     features_one_prev = np.append(features_one_prev, one_prev[idx])
+            if curr is not None:
+                features_curr = np.append(features_curr, curr[feat_idx])
+            if one_prev is not None:
+                features_one_prev = np.append(features_one_prev, curr[feat_idx])
+            if two_prev is not None:
+                features_two_prev = np.append(features_two_prev, curr[feat_idx])
+            if three_prev is not None:
+                features_three_prev = np.append(features_three_prev, curr[feat_idx])
+            if four_prev is not None:
+                features_four_prev = np.append(features_four_prev, curr[feat_idx])
+            if five_prev is not None:
+                features_five_prev = np.append(features_five_prev, curr[feat_idx])
+            if six_prev is not None:
+                features_six_prev = np.append(features_six_prev, curr[feat_idx])
+            if seven_prev is not None:
+                features_seven_prev = np.append(features_seven_prev, curr[feat_idx])
 
-        # features_two_prev = []
-        # for idx in f:
-        #     features_two_prev = np.append(features_two_prev, two_prev[idx])
+            minimum_vec = np.append(minimum_vec, minimum[feat_idx])
+            maximum_vec = np.append(maximum_vec, maximum[feat_idx])
 
-        # features_three_prev = []
-        # for idx in f:
-        #     features_three_prev = np.append(features_three_prev, three_prev[idx])
+        x_curr = features_curr
+        x_one_prev = features_one_prev
+        x_two_prev = features_two_prev
+        x_three_prev = features_three_prev
+        x_four_prev = features_four_prev
+        x_five_prev = features_five_prev
+        x_six_prev = features_six_prev
+        x_seven_prev = features_seven_prev
+        '''
+        # END FEATURE SELECTION
 
-        # if four_prev is not None:
-        #     features_four_prev = []
-        #     for idx in f:
-        #         features_four_prev = np.append(features_four_prev, four_prev[idx])
-
-        # minimum_vec = []
-        # maximum_vec = []
-        # for idx in f:
-        #     minimum_vec = np.append(minimum_vec, minimum[idx])
-        #     maximum_vec = np.append(maximum_vec, maximum[idx])
-
-        # x_curr = features_curr
-        # x_one_prev = features_one_prev
-        # x_two_prev = features_two_prev
-        # x_three_prev = features_three_prev
-
-        # if four_prev is not None:
-        #     x_four_prev = features_four_prev
 
         if curr is not None:
             x_curr = np.concatenate((curr[33:93], curr[132:]))
@@ -230,6 +320,9 @@ def transform_into_x_feature(daysData, isFlatten, modelType, numDays, maximum, m
             x_six_prev = np.concatenate((six_prev[33:93], six_prev[132:]))
         if seven_prev is not None:
             x_seven_prev = np.concatenate((seven_prev[33:93], seven_prev[132:]))
+
+        minimum_vec = np.concatenate((minimum[33:93],minimum[132:]))
+        maximum_vec = np.concatenate((maximum[33:93],maximum[132:]))
 
 
 
@@ -251,9 +344,6 @@ def transform_into_x_feature(daysData, isFlatten, modelType, numDays, maximum, m
     if seven_prev is not None:
         numeric_x_seven_prev = np.array([0.0 if math.isnan(float(numeric_string)) else float(numeric_string) for numeric_string in x_seven_prev])
 
-
-    minimum_vec = np.concatenate((minimum[33:93],minimum[132:]))
-    maximum_vec = np.concatenate((maximum[33:93],maximum[132:]))
 
     # final feature vector (can vary how many past days to use)
     x = np.zeros((1, numDays, len(x_curr)))
@@ -289,7 +379,6 @@ def transform_into_x_feature(daysData, isFlatten, modelType, numDays, maximum, m
     if numDays >= 8:
         ret8 = np.divide(np.subtract(numeric_x_seven_prev, minimum_vec), np.subtract(maximum_vec, minimum_vec))
         x[0][7] = np.array([0.0 if math.isnan(float(num)) else num for num in ret8])
-
 
     if isFlatten:
         return [x.flatten()]
@@ -354,6 +443,7 @@ def find_important_features(csv, ema_index=93):
 
         if curr[ema_index] != '':
             Y = np.append(Y, int(curr[ema_index]))
+
             if len(X) == 0:
                 X = np.array([numeric_x_curr])
                 #print(X.shape)
@@ -362,11 +452,24 @@ def find_important_features(csv, ema_index=93):
                 #print(X.shape)
 
     print(X.shape)
-    test = SelectKBest(score_func=chi2, k=1)
+    test = SelectKBest(f_classif)
     fit = test.fit(X, Y)
-
     np.set_printoptions(precision=5)
     print(fit.scores_)
+
+    # model = ExtraTreesClassifier()
+    # model.fit(X, Y)
+    # print(model.feature_importances_)
+
+    # model = LogisticRegression()
+    # rfe = RFE(model, 10)
+    # fit = rfe.fit(X, Y)
+
+    # print("Selected Features: %s") % fit.support_
+    # print("Feature Ranking: %s") % fit.ranking_
+
+
+
 
 
 

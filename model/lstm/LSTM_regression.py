@@ -12,7 +12,7 @@ import model_utilities
 # index 93 is ema_CALM
 EMA_INDEX = 93
 
-def LSTM_classification_participant_dependent(csv, trainingid, validationid, testingid, maximum, minimum, totalDays):
+def LSTM_regression_participant_dependent(csv, trainingid, validationid, testingid, maximum, minimum, totalDays):
     X_train = []
     Y_train = []
 
@@ -23,31 +23,7 @@ def LSTM_classification_participant_dependent(csv, trainingid, validationid, tes
     Y_test = []
 
     for i in range(totalDays, len(csv)):
-        days = []
-
-        if totalDays >= 1:
-            days = np.array([csv[i]])
-
-        if totalDays >= 2:
-            days = np.append(days, [csv[i-1]], axis=0)
-
-        if totalDays >= 3:
-            days = np.append(days, [csv[i-2]], axis=0)
-
-        if totalDays >= 4:
-            days = np.append(days, [csv[i-3]], axis=0)
-
-        if totalDays >= 5:
-            days = np.append(days, [csv[i-4]], axis=0)
-
-        if totalDays >= 6:
-            days = np.append(days, [csv[i-5]], axis=0)
-
-        if totalDays >= 7:
-            days = np.append(days, [csv[i-6]], axis=0)
-
-        if totalDays >= 8:
-            days = np.append(days, [csv[i-7]], axis=0)
+        days = model_utilities.collectDayData(csv, i, totalDays)
 
         if model_utilities.isSameUserAcross(days):
             x = model_utilities.transform_into_x_feature(
@@ -104,19 +80,19 @@ def LSTM_classification_participant_dependent(csv, trainingid, validationid, tes
     model.add(LSTM(64, return_sequences=True, recurrent_dropout=0.2))
     model.add(LSTM(64))
 
-    model.add(Dense(4, activation='softmax', kernel_regularizer=L1L2(l1=0.0, l2=0.0)))
-    model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['categorical_accuracy'])
+    model.add(Dense(1, activation='softmax', kernel_regularizer=L1L2(l1=0.0, l2=0.0)))
+    model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['acc'])
     model.fit(X_train, Y_train, epochs=30,  validation_data=(X_val, Y_val))
 
     y_pred = model.predict(X_test)
-    return model_utilities.convert_preds_into_ema(y_pred), Y_test
+    return y_pred, Y_test
 
 
 
 
 
 
-def LSTM_classification_participant_independent(csv, maximum, minimum, totalDays):
+def LSTM_regression_participant_independent(csv, maximum, minimum, totalDays):
     X_train = []
     Y_train = []
 
@@ -127,31 +103,7 @@ def LSTM_classification_participant_independent(csv, maximum, minimum, totalDays
     Y_test = []
 
     for i in range(totalDays - 1, len(csv)):
-        days = []
-        if totalDays >= 1:
-            days = np.array([csv[i]])
-
-        if totalDays >= 2:
-            days = np.append(days, [csv[i-1]], axis=0)
-
-        if totalDays >= 3:
-            days = np.append(days, [csv[i-2]], axis=0)
-
-        if totalDays >= 4:
-            days = np.append(days, [csv[i-3]], axis=0)
-
-        if totalDays >= 5:
-            days = np.append(days, [csv[i-4]], axis=0)
-
-        if totalDays >= 6:
-            days = np.append(days, [csv[i-5]], axis=0)
-
-        if totalDays >= 7:
-            days = np.append(days, [csv[i-6]], axis=0)
-
-        if totalDays >= 8:
-            days = np.append(days, [csv[i-7]], axis=0)
-
+        days = model_utilities.collectDayData(csv, i, totalDays)
 
         if model_utilities.isSameUserAcross(days):
             x = model_utilities.transform_into_x_feature(
@@ -173,12 +125,7 @@ def LSTM_classification_participant_independent(csv, maximum, minimum, totalDays
                     else:
                         X_train = np.concatenate((X_train, x), axis=0)
 
-                    one_hot_labels = [keras.utils.to_categorical(
-                        int(days[0][EMA_INDEX]), num_classes=4)]
-                    if len(Y_train) == 0:
-                        Y_train = one_hot_labels
-                    else:
-                        Y_train = np.concatenate((Y_train, one_hot_labels), axis=0)
+                    Y_train = np.append(Y_train, int(days[0][EMA_INDEX]))
 
                 elif p > 0.60 and p <= 0.75:
                     # validation
@@ -187,12 +134,8 @@ def LSTM_classification_participant_independent(csv, maximum, minimum, totalDays
                     else:
                         X_val = np.concatenate((X_val, x), axis=0)
 
-                    one_hot_labels = [keras.utils.to_categorical(
-                        int(days[0][EMA_INDEX]), num_classes=4)]
-                    if len(Y_val) == 0:
-                        Y_val = one_hot_labels
-                    else:
-                        Y_val = np.concatenate((Y_val, one_hot_labels), axis=0)
+                    Y_val = np.append(Y_val, int(days[0][EMA_INDEX]))
+
                 else:
                     # testing
                     if len(X_test) == 0:
@@ -206,15 +149,17 @@ def LSTM_classification_participant_independent(csv, maximum, minimum, totalDays
 
     model = Sequential()
 
-    model.add(LSTM(128, return_sequences=True, input_shape=(totalDays, len(X_train[0][0]))))
-    model.add(LSTM(128, return_sequences=True, recurrent_dropout=0.2))
-    model.add(LSTM(128, return_sequences=True, recurrent_dropout=0.2))
-    model.add(LSTM(64))
+    model.add(LSTM(10, activation='tanh',recurrent_activation='hard_sigmoid', input_shape=(totalDays, len(X_train[0][0]))))
+    model.add(Dense(128, activation='softmax'))
+    # model.add(LSTM(128, return_sequences=True, input_shape=(totalDays, len(X_train[0][0]))))
+    # model.add(LSTM(128, return_sequences=True, recurrent_dropout=0.2))
+    # #model.add(LSTM(128, return_sequences=True, recurrent_dropout=0.2))
+    # model.add(LSTM(64))
 
-    model.add(Dense(4, activation='softmax', kernel_regularizer=L1L2(l1=0.0, l2=0.0)))
-    model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['categorical_accuracy'])
-    model.fit(X_train, Y_train, epochs=30, validation_data=(X_val, Y_val))
+    model.add(Dense(1))
+    model.compile(loss='mean_squared_error', optimizer='adam', metrics=['acc'])
+    model.fit(X_train, Y_train, epochs=20, validation_data=(X_val, Y_val))
 
     y_pred = model.predict(X_test)
     # return the predictions and the truth values
-    return model_utilities.convert_preds_into_ema(y_pred), Y_test
+    return y_pred, Y_test
