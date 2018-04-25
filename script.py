@@ -10,11 +10,10 @@ from model.lstm import LSTM_classify
 from model.svm import SVM_classify
 
 from model.lstm import LSTM_regression
+from model.simpleNN import simpleNN_regression
 
 import metrics
-import model_utilities
-
-
+from utilities import model_utilities
 
 
 
@@ -59,7 +58,7 @@ if __name__ == "__main__":
             if args.participantIndependent == 'True':
                 total_simpleNN_independent_acc = 0
                 for i in range(0, 5):
-                    simpleNN_independent_preds, simpleNN_independent_truths = simpleNN_classify.simple_NN_classification_participant_independent(
+                    simpleNN_independent_preds, simpleNN_independent_truths = simpleNN_classify.classification_participant_independent(
                         csv,
                         maximum_features,
                         minimum_features,
@@ -80,7 +79,7 @@ if __name__ == "__main__":
                 for i in range(0, 5):
                     # randomize the userids
                     indices = np.random.permutation(len(user_ids))
-                    simpleNN_dependent_preds, simpleNN_dependent_truths = simpleNN_classify.simple_NN_classification_participant_dependent(
+                    simpleNN_dependent_preds, simpleNN_dependent_truths = simpleNN_classify.classification_participant_dependent(
                         csv,
                         user_ids[indices[:38]],
                         user_ids[indices[38:51]],
@@ -102,7 +101,7 @@ if __name__ == "__main__":
                 print("START LSTM INDEPENDENT CLASSIFY")
                 total_LSTM_independent = 0
                 for i in range(0, 5):
-                    LSTM_independent_preds, LSTM_independent_truths = LSTM_classify.LSTM_classification_participant_independent(
+                    LSTM_independent_preds, LSTM_independent_truths = LSTM_classify.classify_participant_independent(
                         csv,
                         maximum_features,
                         minimum_features,
@@ -122,7 +121,7 @@ if __name__ == "__main__":
                 for i in range(0, 5):
                     indices = np.random.permutation(len(user_ids))
 
-                    LSTM_dependent_preds, LSTM_dependent_truths = LSTM_classify.LSTM_classification_participant_dependent(
+                    LSTM_dependent_preds, LSTM_dependent_truths = LSTM_classify.classify_participant_dependent(
                         csv,
                         user_ids[indices[:38]],
                         user_ids[indices[38:51]],
@@ -168,12 +167,13 @@ if __name__ == "__main__":
 
 
     elif args.task == "regression":
+
         if args.model == "lstm":
             if args.participantIndependent == 'True':
                 print("START LSTM INDEPENDENT REGRESSION")
                 total_LSTM_independent = 0
                 for i in range(0, 5):
-                    LSTM_independent_preds, LSTM_independent_truths = LSTM_regression.LSTM_regression_participant_independent(
+                    LSTM_independent_preds, LSTM_independent_truths = LSTM_regression.regression_participant_independent(
                         csv,
                         maximum_features,
                         minimum_features,
@@ -186,7 +186,7 @@ if __name__ == "__main__":
 
                     total_LSTM_independent += lstm_independent_mse
 
-                print("AVERAGE LSTM independent MSE: ")
+                print("AVERAGE LSTM Independent MSE: ")
                 print(total_LSTM_independent / float(5))
 
             else:
@@ -195,7 +195,7 @@ if __name__ == "__main__":
                 for i in range(0, 5):
                     indices = np.random.permutation(len(user_ids))
 
-                    LSTM_dependent_preds, LSTM_dependent_truths = LSTM_regression.LSTM_regression_participant_dependent(
+                    LSTM_dependent_preds, LSTM_dependent_truths = LSTM_regression.regression_participant_dependent(
                         csv,
                         user_ids[indices[:38]],
                         user_ids[indices[38:51]],
@@ -211,8 +211,54 @@ if __name__ == "__main__":
 
                     total_LSTM_dependent += lstm_dependent_mse
 
-                print("AVERAGE LSTM dependent MSE: ")
+                print("AVERAGE LSTM Dependent MSE: ")
                 print(total_LSTM_dependent / float(5))
+
+        if args.model == "simpleNN":
+            if args.participantIndependent == 'True':
+                print("START SIMPLE_NN INDEPENDENT REGRESSION")
+                total_simpleNN_independent_mse = 0
+                for i in range(0, 5):
+                    simpleNN_independent_preds, simpleNN_independent_truths = simpleNN_regression.regression_participant_independent(
+                        csv,
+                        maximum_features,
+                        minimum_features,
+                        args.totalDays
+                    )
+                    simpleNN_independent_mse = metrics.calculate_mean_squared_error(
+                        simpleNN_independent_preds,
+                        simpleNN_independent_truths
+                    )
+
+                    total_simpleNN_independent_mse += simpleNN_independent_mse
+
+                print("AVERAGE SIMPLE NN Independent Mean Squared Error")
+                print(total_simpleNN_independent_mse / float(5))
+
+            else:
+                print("START SIMPLE_NN DEPENDENT REGRESSION")
+                total_simpleNN_dependent_mse = 0
+                for i in range(0, 5):
+                    # randomize the userids
+                    indices = np.random.permutation(len(user_ids))
+                    simpleNN_dependent_preds, simpleNN_dependent_truths = simpleNN_regression.regression_participant_dependent(
+                        csv,
+                        user_ids[indices[:38]],
+                        user_ids[indices[38:51]],
+                        user_ids[indices[51:]],
+                        maximum_features,
+                        minimum_features,
+                        args.totalDays
+                    )
+                    simpleNN_dependent_mse = metrics.calculate_mean_squared_error(
+                        simpleNN_dependent_preds,
+                        simpleNN_dependent_truths
+                    )
+
+                    total_simpleNN_dependent_mse += simpleNN_dependent_mse
+
+                print("AVERAGE SIMPLE NN Dependent Mean Squared Error")
+                print(total_simpleNN_dependent_mse / float(5))
 
 
 

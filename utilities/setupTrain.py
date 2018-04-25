@@ -1,13 +1,109 @@
+import keras
+import random
 import numpy as np
 import math
-from sklearn.feature_selection import SelectKBest, f_classif
-from sklearn.feature_selection import chi2
 
-import keras
+# for participant independent
+def collect_train_val_test_independent(isOneHotLabel, cutoff_train, cutoff_val, train_x, train_y, val_x, val_y, test_x, test_y, x_vec, label):
+    p = random.random()
+    if p <= cutoff_train:
+        #training
+        if len(train_x) == 0:
+            train_x = x_vec
+        else:
+            train_x = np.concatenate((train_x, x_vec), axis=0)
 
-from sklearn.ensemble import ExtraTreesClassifier
-from sklearn.feature_selection import RFE
-from sklearn.linear_model import LogisticRegression
+        if isOneHotLabel:
+            one_hot_labels = [keras.utils.to_categorical(
+                int(label), num_classes=4)]
+            if len(train_y) == 0:
+                train_y = one_hot_labels
+            else:
+                train_y = np.concatenate((train_y, one_hot_labels), axis=0)
+        else:
+            train_y = np.append(train_y, int(label))
+
+    elif p > cutoff_train and p <= cutoff_val:
+        # validation
+        if len(val_x) == 0:
+            val_x = x_vec
+        else:
+            val_x = np.concatenate((val_x, x_vec), axis=0)
+
+        if isOneHotLabel:
+            one_hot_labels = [keras.utils.to_categorical(
+                int(label), num_classes=4)]
+            if len(val_y) == 0:
+                val_y = one_hot_labels
+            else:
+                val_y = np.concatenate((val_y, one_hot_labels), axis=0)
+        else:
+            val_y = np.append(val_y, int(label))
+
+    else:
+        # testing
+        if len(test_x) == 0:
+            test_x = x_vec
+        else:
+            test_x = np.concatenate((test_x, x_vec), axis=0)
+
+        #the truth values
+        test_y = np.append(test_y, int(label))
+
+    return train_x, train_y, val_x, val_y, test_x, test_y
+
+
+
+
+# for participant dependent
+def collect_train_val_test_dependent(isOneHotLabel, userid, trainingid, validationid, testingid, train_x, train_y, val_x, val_y, test_x, test_y, x_vec, label):
+    #training
+    if userid in trainingid:
+        if len(train_x) == 0:
+            train_x = x_vec
+        else:
+            train_x = np.concatenate((train_x, x_vec), axis=0)
+
+        if isOneHotLabel:
+            one_hot_labels = [keras.utils.to_categorical(
+                int(label), num_classes=4)]
+            if len(train_y) == 0:
+                train_y = one_hot_labels
+            else:
+                train_y = np.concatenate((train_y, one_hot_labels), axis=0)
+        else:
+            train_y = np.append(train_y, int(label))
+
+    # validation
+    elif userid in validationid:
+        if len(val_x) == 0:
+            val_x = x_vec
+        else:
+            val_x = np.concatenate((val_x, x_vec), axis=0)
+
+        if isOneHotLabel:
+            one_hot_labels = [keras.utils.to_categorical(
+                int(label), num_classes=4)]
+            if len(val_y) == 0:
+                val_y = one_hot_labels
+            else:
+                val_y = np.concatenate((val_y, one_hot_labels), axis=0)
+        else:
+            val_y = np.append(val_y, int(label))
+
+    # testing
+    elif userid in testingid:
+        if len(test_x) == 0:
+            test_x = x_vec
+        else:
+            test_x = np.concatenate((test_x, x_vec), axis=0)
+
+        #the truth values
+        test_y = np.append(test_y, int(label))
+
+    return train_x, train_y, val_x, val_y, test_x, test_y
+
+
 
 # collects features of current day/previous days
 def collectDayData(csv, index, totalDays):
@@ -38,6 +134,17 @@ def collectDayData(csv, index, totalDays):
         days = np.append(days, [csv[index-7]], axis=0)
 
     return days
+
+
+#check if the same user is across all the days data
+def isSameUserAcross(daysData):
+    userid = daysData[0][1]
+    for i in range(1, len(daysData)):
+        if daysData[i][1] != userid:
+            return False
+    return True
+
+
 
 
 # converts into a final feature vector for the model to train on
@@ -384,90 +491,6 @@ def transform_into_x_feature(daysData, isFlatten, modelType, numDays, maximum, m
         return [x.flatten()]
     else:
         return x
-
-
-#check if the same user is across all the days data
-def isSameUserAcross(daysData):
-    userid = daysData[0][1]
-    for i in range(1, len(daysData)):
-        if daysData[i][1] != userid:
-            return False
-    return True
-
-
-
-#convert the prediction prob vec into ema scores
-def convert_preds_into_ema(preds):
-    pred_final = []
-    # transform the predicted probability vector into an ema score by taking the index with the highest probability
-    for i in range(len(preds)):
-        ema_score = np.argmax(preds[i])
-        pred_final = np.append(pred_final, ema_score)
-    return pred_final
-
-
-# finds maximum and minimum of features across the entire dataset
-def find_max_min(csv):
-    ema_scores = [93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106]
-    csv = np.array(csv)
-    # first three columns are studyid, eurekaid, timestamp (which are useless) so just convert to 0 since we aren't normalizing this
-    maximum = np.array([0, 0, 0])
-    minimum = np.array([0, 0, 0])
-    for i in range(3, csv.shape[1]):
-        # if it's ema scores, just convert to 0 because we don't care since we aren't normalizing this
-        if i in ema_scores:
-            maximum = np.append(maximum, 0)
-            minimum = np.append(minimum, 0)
-        else:
-            arr = np.array([row[i] for row in csv])
-            num_arr = np.array([0.0 if math.isnan(float(numeric_string)) else float(numeric_string) for numeric_string in arr])
-            maximum = np.append(maximum, np.amax(num_arr, axis=0))
-            minimum = np.append(minimum, np.amin(num_arr, axis=0))
-    return maximum, minimum
-
-
-
-
-
-def find_important_features(csv, ema_index=93):
-    print("Calculating which features are important")
-    X = []
-    Y = []
-
-    for i in range(0, len(csv)):
-        curr = csv[i]
-        x_curr = np.array(curr[3:93] + curr[107:])
-
-        numeric_x_curr = np.array([0.0 if math.isnan(float(numeric_string)) else float(numeric_string) for numeric_string in x_curr])
-
-
-        if curr[ema_index] != '':
-            Y = np.append(Y, int(curr[ema_index]))
-
-            if len(X) == 0:
-                X = np.array([numeric_x_curr])
-                #print(X.shape)
-            else:
-                X = np.concatenate((X, [numeric_x_curr]), axis=0)
-                #print(X.shape)
-
-    print(X.shape)
-    test = SelectKBest(f_classif)
-    fit = test.fit(X, Y)
-    np.set_printoptions(precision=5)
-    print(fit.scores_)
-
-    # model = ExtraTreesClassifier()
-    # model.fit(X, Y)
-    # print(model.feature_importances_)
-
-    # model = LogisticRegression()
-    # rfe = RFE(model, 10)
-    # fit = rfe.fit(X, Y)
-
-    # print("Selected Features: %s") % fit.support_
-    # print("Feature Ranking: %s") % fit.ranking_
-
 
 
 

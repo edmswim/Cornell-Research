@@ -1,14 +1,14 @@
 import numpy as np
 import keras
-import random
 import math
+import random
 
 from keras.models import Sequential
-from keras.layers import Dense, LSTM, Dropout, TimeDistributed, Conv2D, Convolution1D, Conv1D
+from keras.layers import Dense, Dropout, Flatten, MaxPooling1D, Convolution1D
 from keras.regularizers import L1L2
 
-from utilities import model_utilities
 from utilities import setupTrain
+from utilities import model_utilities
 
 # index 93 is ema_CALM
 EMA_INDEX = 93
@@ -23,14 +23,14 @@ def regression_participant_dependent(csv, trainingid, validationid, testingid, m
     X_test = []
     Y_test = []
 
-    for i in range(totalDays, len(csv)):
+    for i in range(totalDays - 1, len(csv)):
         days = setupTrain.collectDayData(csv, i, totalDays)
 
         if setupTrain.isSameUserAcross(days):
             x = setupTrain.transform_into_x_feature(
                 days,
-                False,
-                "LSTM",
+                True,
+                "simpleNN",
                 totalDays,
                 maximum,
                 minimum
@@ -54,17 +54,25 @@ def regression_participant_dependent(csv, trainingid, validationid, testingid, m
                     days[0][EMA_INDEX]
                 )
 
-    model = Sequential()
-    model.add(LSTM(64, return_sequences=True, input_shape=(totalDays, len(X_train[0][0]))))
-    model.add(LSTM(64, return_sequences=True, recurrent_dropout=0.2))
-    model.add(LSTM(64))
 
-    model.add(Dense(1, activation='softmax', kernel_regularizer=L1L2(l1=0.0, l2=0.0)))
-    model.compile(loss='mean_squared_error', optimizer='adam', metrics=['acc'])
-    model.fit(X_train, Y_train, epochs=30,  validation_data=(X_val, Y_val))
+    model = Sequential()
+    model.add(Dense(64, input_dim=len(X_train[0]), activation='relu'))
+    model.add(Dense(64, activation='relu'))
+    model.add(Dropout(0.2))
+
+    model.add(Dense(1,
+                activation='softmax',
+                kernel_regularizer=L1L2(l1=0.0, l2=0.15)))
+
+    model.compile(optimizer='rmsprop',
+              loss='mean_squared_error',
+              metrics=['acc'])
+    model.fit(X_train, Y_train, epochs=15,  validation_data=(X_val, Y_val))
 
     y_pred = model.predict(X_test)
     return y_pred, Y_test
+
+
 
 
 
@@ -78,14 +86,15 @@ def regression_participant_independent(csv, maximum, minimum, totalDays):
     X_test = []
     Y_test = []
 
+
     for i in range(totalDays - 1, len(csv)):
         days = setupTrain.collectDayData(csv, i, totalDays)
 
         if setupTrain.isSameUserAcross(days):
             x = setupTrain.transform_into_x_feature(
                 days,
-                False,
-                "LSTM",
+                True,
+                "simpleNN",
                 totalDays,
                 maximum,
                 minimum
@@ -106,15 +115,19 @@ def regression_participant_independent(csv, maximum, minimum, totalDays):
                     days[0][EMA_INDEX]
                 )
 
+
     model = Sequential()
-    model.add(LSTM(128, return_sequences=True, input_shape=(totalDays, len(X_train[0][0]))))
-    model.add(LSTM(128, return_sequences=True, recurrent_dropout=0.2))
-    model.add(LSTM(64))
-    model.add(Dense(128, activation='tanh'))
-    model.add(Dense(1,  activation='relu'))
-    model.compile(loss='mean_squared_error', optimizer='adam', metrics=['acc'])
-    model.fit(X_train, Y_train, epochs=25, validation_data=(X_val, Y_val))
+    model.add(Dense(1024, input_dim=len(X_train[0]), activation='relu'))
+    model.add(Dense(1024, activation='relu'))
+    model.add(Dense(1,
+                activation='relu',
+                kernel_regularizer=L1L2(l1=0.0, l2=0.2)))
+
+    model.compile(optimizer='adam',
+              loss='mean_squared_error',
+              metrics=['acc'])
+    model.fit(X_train, Y_train, epochs=15,  validation_data=(X_val, Y_val))
 
     y_pred = model.predict(X_test)
-    # return the predictions and the truth values
+    print(y_pred[:10])
     return y_pred, Y_test

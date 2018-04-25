@@ -1,1 +1,2 @@
 from model.simpleNN import simpleNN_classify
+from model.simpleNN import simpleNN_regression
