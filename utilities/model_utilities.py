@@ -10,8 +10,6 @@ from sklearn.feature_selection import RFE
 from sklearn.linear_model import LogisticRegression
 
 
-
-
 #convert the prediction prob vec into ema scores
 def convert_preds_into_ema(preds):
     pred_final = []
@@ -20,32 +18,6 @@ def convert_preds_into_ema(preds):
         ema_score = np.argmax(preds[i])
         pred_final = np.append(pred_final, ema_score)
     return pred_final
-
-
-
-
-
-# finds maximum and minimum of features across the entire dataset
-def find_max_min(csv):
-    ema_scores = [93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106]
-    csv = np.array(csv)
-    # first three columns are studyid, eurekaid, timestamp (which are useless) so just convert to 0 since we aren't normalizing this
-    maximum = np.array([0, 0, 0])
-    minimum = np.array([0, 0, 0])
-    for i in range(3, csv.shape[1]):
-        # if it's ema scores, just convert to 0 because we don't care since we aren't normalizing this
-        if i in ema_scores:
-            maximum = np.append(maximum, 0)
-            minimum = np.append(minimum, 0)
-        else:
-            arr = np.array([row[i] for row in csv])
-            num_arr = np.array([0.0 if math.isnan(float(numeric_string)) else float(numeric_string) for numeric_string in arr])
-            maximum = np.append(maximum, np.amax(num_arr, axis=0))
-            minimum = np.append(minimum, np.amin(num_arr, axis=0))
-    return maximum, minimum
-
-
-
 
 
 def find_important_features(csv, ema_index=93):

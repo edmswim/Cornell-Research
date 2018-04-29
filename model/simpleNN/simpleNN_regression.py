@@ -13,7 +13,7 @@ from utilities import model_utilities
 # index 93 is ema_CALM
 EMA_INDEX = 93
 
-def regression_participant_dependent(csv, trainingid, validationid, testingid, maximum, minimum, totalDays):
+def regression_participant_independent(csv, trainingid, validationid, testingid, normalizerMethod, normalizer1, normalizer2, totalDays):
     X_train = []
     Y_train = []
 
@@ -32,13 +32,14 @@ def regression_participant_dependent(csv, trainingid, validationid, testingid, m
                 True,
                 "simpleNN",
                 totalDays,
-                maximum,
-                minimum
+                "z-score",
+                normalizer1,
+                normalizer2
             )
 
             # put the x vector into the appropriate set (i.e. training, validation, testing)
             if days[0][EMA_INDEX] != '':
-                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_dependent(
+                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_independent(
                     False,
                     days[0][1],
                     trainingid,
@@ -56,10 +57,8 @@ def regression_participant_dependent(csv, trainingid, validationid, testingid, m
 
 
     model = Sequential()
-    model.add(Dense(64, input_dim=len(X_train[0]), activation='relu'))
-    model.add(Dense(64, activation='relu'))
-    model.add(Dropout(0.2))
-
+    model.add(Dense(1024, input_dim=len(X_train[0]), activation='relu'))
+    model.add(Dense(1024, activation='relu'))
     model.add(Dense(1,
                 activation='softmax',
                 kernel_regularizer=L1L2(l1=0.0, l2=0.15)))
@@ -76,7 +75,7 @@ def regression_participant_dependent(csv, trainingid, validationid, testingid, m
 
 
 
-def regression_participant_independent(csv, maximum, minimum, totalDays):
+def regression_participant_dependent(csv, normalizerMethod, normalizer1, normalizer2, totalDays):
     X_train = []
     Y_train = []
 
@@ -96,12 +95,13 @@ def regression_participant_independent(csv, maximum, minimum, totalDays):
                 True,
                 "simpleNN",
                 totalDays,
-                maximum,
-                minimum
+                "z-score",
+                normalizer1,
+                normalizer2
             )
 
             if days[0][EMA_INDEX] != '':
-                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_independent(
+                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_dependent(
                     False,
                     0.60,
                     0.75,

@@ -1,14 +1,13 @@
 import numpy as np
 from sklearn import svm
 from sklearn.svm import LinearSVC
-import random
 
 from utilities import model_utilities
 from utilities import setupTrain
 
 EMA_INDEX = 93
 
-def classification_participant_dependent(csv, trainingid, validationid, testingid, maximum, minimum, totalDays):
+def classification_participant_independent(csv, trainingid, validationid, testingid, normalizerMethod, normalizer1, normalizer2, totalDays):
     X_train = []
     Y_train = []
 
@@ -27,13 +26,14 @@ def classification_participant_dependent(csv, trainingid, validationid, testingi
                 True,
                 "SVM",
                 totalDays,
-                maximum,
-                minimum
+                "z-score",
+                normalizer1,
+                normalizer2
             )
 
             # put the x vector into the appropriate set (i.e. training, validation, testing)
             if days[0][EMA_INDEX] != '':
-                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_dependent(
+                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_independent(
                     False,
                     days[0][1],
                     trainingid,
@@ -49,13 +49,13 @@ def classification_participant_dependent(csv, trainingid, validationid, testingi
                     days[0][EMA_INDEX]
                 )
 
-    clf = LinearSVC(random_state=0)
+    clf = LinearSVC(random_state=0, class_weight={0: 0.3, 1: 0.25, 2: 0.25, 3: 0.20})
     clf.fit(X_train, Y_train)
     preds = clf.predict(X_test)
     return preds, Y_test
 
 
-def classification_participant_independent(csv, maximum, minimum, totalDays):
+def classification_participant_dependent(csv, normalizerMethod, normalizer1, normalizer2, totalDays):
     X_train = []
     Y_train = []
 
@@ -74,12 +74,13 @@ def classification_participant_independent(csv, maximum, minimum, totalDays):
                 True,
                 "SVM",
                 totalDays,
-                maximum,
-                minimum
+                "z-score",
+                normalizer1,
+                normalizer2
             )
 
             if days[0][EMA_INDEX] != '':
-                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_independent(
+                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_dependent(
                     False,
                     0.60,
                     0.75,
@@ -93,8 +94,10 @@ def classification_participant_independent(csv, maximum, minimum, totalDays):
                     days[0][EMA_INDEX]
                 )
 
-    clf = LinearSVC(random_state=0, C=2)
-    #clf = svm.SVC(random_state=0, C= 10, kernel = 'linear')
+    # FIX class_weight
+    clf = LinearSVC(random_state=0, C = 2)
+    #clf = svm.SVC(random_state=0, class_weight={0:0.3, 1:0.25, 2:0.2, 3:0.2})
+
     clf.fit(X_train, Y_train)
     preds = clf.predict(X_test)
     return preds, Y_test

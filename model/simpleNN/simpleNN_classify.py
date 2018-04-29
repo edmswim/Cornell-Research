@@ -13,7 +13,7 @@ from utilities import setupTrain
 # index 93 is ema_CALM
 EMA_INDEX = 93
 
-def classification_participant_dependent(csv, trainingid, validationid, testingid, maximum, minimum, totalDays):
+def classification_participant_independent(csv, trainingid, validationid, testingid, normalizerMethod, normalizer1, normalizer2, totalDays):
     X_train = []
     Y_train = []
 
@@ -32,13 +32,14 @@ def classification_participant_dependent(csv, trainingid, validationid, testingi
                 True,
                 "simpleNN",
                 totalDays,
-                maximum,
-                minimum
+                "z-score",
+                normalizer1,
+                normalizer2
             )
 
             # put the x vector into the appropriate set (i.e. training, validation, testing)
             if days[0][EMA_INDEX] != '':
-                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_dependent(
+                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_independent(
                     True,
                     days[0][1],
                     trainingid,
@@ -56,9 +57,8 @@ def classification_participant_dependent(csv, trainingid, validationid, testingi
 
 
     model = Sequential()
-    model.add(Dense(64, input_dim=len(X_train[0]), activation='relu'))
-    model.add(Dense(64, activation='relu'))
-    model.add(Dropout(0.2))
+    model.add(Dense(1024, input_dim=len(X_train[0]), activation='relu'))
+    model.add(Dense(256, activation='relu'))
 
     model.add(Dense(4,
                 activation='softmax',
@@ -75,7 +75,7 @@ def classification_participant_dependent(csv, trainingid, validationid, testingi
 
 
 
-def classification_participant_independent(csv, maximum, minimum, totalDays):
+def classification_participant_dependent(csv, normalizerMethod, normalizer1, normalizer2, totalDays):
     X_train = []
     Y_train = []
 
@@ -95,12 +95,13 @@ def classification_participant_independent(csv, maximum, minimum, totalDays):
                 True,
                 "simpleNN",
                 totalDays,
-                maximum,
-                minimum
+                "z-score",
+                normalizer1,
+                normalizer2
             )
 
             if days[0][EMA_INDEX] != '':
-                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_independent(
+                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_dependent(
                     True,
                     0.60,
                     0.75,

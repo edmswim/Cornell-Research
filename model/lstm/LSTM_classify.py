@@ -5,15 +5,23 @@ import math
 
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, Dropout, TimeDistributed, Conv2D, Convolution1D, Conv1D
+from keras.layers import Bidirectional
 from keras.regularizers import L1L2
 
 from utilities import model_utilities
 from utilities import setupTrain
 
+
+# from tensorflow.python.client import device_lib
+# from keras import backend as K
+
+# print(device_lib.list_local_devices())
+# K.tensorflow_backend._get_available_gpus()
+
 # index 93 is ema_CALM
 EMA_INDEX = 93
 
-def classify_participant_dependent(csv, trainingid, validationid, testingid, maximum, minimum, totalDays):
+def classify_participant_independent(csv, trainingid, validationid, testingid, normalizer, normalizer1, normalizer2, totalDays):
     X_train = []
     Y_train = []
 
@@ -32,14 +40,15 @@ def classify_participant_dependent(csv, trainingid, validationid, testingid, max
                 False,
                 "LSTM",
                 totalDays,
-                maximum,
-                minimum
+                "z-score",
+                normalizer1,
+                normalizer2
             )
 
             # put the x vector into the appropriate set (i.e. training, validation, testing)
             if days[0][EMA_INDEX] != '':
 
-                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_dependent(
+                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_independent(
                     True,
                     days[0][1],
                     trainingid,
@@ -69,7 +78,7 @@ def classify_participant_dependent(csv, trainingid, validationid, testingid, max
 
 
 
-def classify_participant_independent(csv, maximum, minimum, totalDays):
+def classify_participant_dependent(csv, normalizer, normalizer1, normalizer2, totalDays):
     X_train = []
     Y_train = []
 
@@ -88,12 +97,13 @@ def classify_participant_independent(csv, maximum, minimum, totalDays):
                 False,
                 "LSTM",
                 totalDays,
-                maximum,
-                minimum
+                "z-score",
+                normalizer1,
+                normalizer2
             )
 
             if days[0][EMA_INDEX] != '':
-                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_independent(
+                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_dependent(
                     True,
                     0.60,
                     0.75,
@@ -108,15 +118,25 @@ def classify_participant_independent(csv, maximum, minimum, totalDays):
                 )
 
     model = Sequential()
-
     model.add(LSTM(128, return_sequences=True, input_shape=(totalDays, len(X_train[0][0]))))
-    model.add(LSTM(128, return_sequences=True, recurrent_dropout=0.2))
-    #model.add(LSTM(128, return_sequences=True, recurrent_dropout=0.2))
+    model.add(LSTM(128, return_sequences=True, recurrent_dropout=0.20))
+    #model.add(LSTM(128, return_sequences=True, recurrent_dropout=0.20))
+
+
+
+    #model.add(Bidirectional(LSTM(128, return_sequences=True), input_shape=(totalDays, len(X_train[0][0]))))
+    #model.add(Bidirectional(LSTM(128, return_sequences=True, recurrent_dropout=0.2)))
+
+
+
+
+
+    #model.add(Bidirectional(LSTM(64)))
     model.add(LSTM(64))
 
     model.add(Dense(4, activation='softmax', kernel_regularizer=L1L2(l1=0.0, l2=0.0)))
     model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['categorical_accuracy'])
-    model.fit(X_train, Y_train, epochs=30, validation_data=(X_val, Y_val))
+    model.fit(X_train, Y_train, epochs=25, validation_data=(X_val, Y_val))
 
     y_pred = model.predict(X_test)
     # return the predictions and the truth values
