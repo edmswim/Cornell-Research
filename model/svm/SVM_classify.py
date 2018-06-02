@@ -1,9 +1,9 @@
 import numpy as np
 from sklearn import svm
 from sklearn.svm import LinearSVC
-
-from utilities import model_utilities
-from utilities import setupTrain
+from utilities import prediction_utilities
+from utilities import assign_data
+from utilities import transform_to_train_vec
 
 EMA_INDEX = 93
 
@@ -18,10 +18,10 @@ def classification_participant_independent(csv, trainingid, validationid, testin
     Y_test = []
 
     for i in range(totalDays - 1, len(csv)):
-        days = setupTrain.collectDayData(csv, i, totalDays)
+        days = data_collector.collectDayData(csv, i, totalDays)
 
-        if setupTrain.isSameUserAcross(days):
-            x = setupTrain.transform_into_x_feature(
+        if data_collector.isSameUserAcross(days):
+            x = transform_to_train_vec.transform(
                 days,
                 True,
                 "SVM",
@@ -33,7 +33,7 @@ def classification_participant_independent(csv, trainingid, validationid, testin
 
             # put the x vector into the appropriate set (i.e. training, validation, testing)
             if days[0][EMA_INDEX] != '':
-                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_independent(
+                X_train, Y_train, X_val, Y_val, X_test, Y_test = assign_data.independent_assign(
                     False,
                     days[0][1],
                     trainingid,
@@ -55,7 +55,7 @@ def classification_participant_independent(csv, trainingid, validationid, testin
     return preds, Y_test
 
 
-def classification_participant_dependent(csv, normalizerMethod, normalizer1, normalizer2, totalDays):
+def classification_participant_dependent(csv, normalizerMethod, normalizer1, normalizer2, totalDays, leave_one_patient):
     X_train = []
     Y_train = []
 
@@ -66,10 +66,12 @@ def classification_participant_dependent(csv, normalizerMethod, normalizer1, nor
     Y_test = []
 
     for i in range(totalDays - 1, len(csv)):
-        days = setupTrain.collectDayData(csv, i, totalDays)
+        days = data_collector.collectDayData(csv, i, totalDays)
 
-        if setupTrain.isSameUserAcross(days):
-            x = setupTrain.transform_into_x_feature(
+        userid = days[0][1]
+
+        if data_collector.isSameUserAcross(days):
+            x = transform_to_train_vec.transform(
                 days,
                 True,
                 "SVM",
@@ -80,7 +82,7 @@ def classification_participant_dependent(csv, normalizerMethod, normalizer1, nor
             )
 
             if days[0][EMA_INDEX] != '':
-                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_dependent(
+                X_train, Y_train, X_val, Y_val, X_test, Y_test = assign_data.dependent_assign(
                     False,
                     0.60,
                     0.75,
@@ -91,11 +93,13 @@ def classification_participant_dependent(csv, normalizerMethod, normalizer1, nor
                     X_test,
                     Y_test,
                     x,
-                    days[0][EMA_INDEX]
+                    days[0][EMA_INDEX],
+                    leave_one_patient,
+                    userid
                 )
 
     # FIX class_weight
-    clf = LinearSVC(random_state=0, C = 2)
+    clf = LinearSVC(random_state=0, C=1)
     #clf = svm.SVC(random_state=0, class_weight={0:0.3, 1:0.25, 2:0.2, 3:0.2})
 
     clf.fit(X_train, Y_train)

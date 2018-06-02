@@ -45,10 +45,27 @@ def confusionMetric(preds, truths):
 
     print(ret1)
 
-    ret2[0] = mapping[0] / float(countZeros)
-    ret2[1] = mapping[1] / float(countOnes)
-    ret2[2] = mapping[2] / float(countTwos)
-    ret2[3] = mapping[3] / float(countThrees)
+    if countZeros > 0:
+        ret2[0] = mapping[0] / float(countZeros)
+    else:
+        ret2[0] = 0
+
+    if countOnes > 0:
+        ret2[1] = mapping[1] / float(countOnes)
+    else:
+        ret2[1] = 0
+
+
+    if countTwos > 0:
+        ret2[2] = mapping[2] / float(countTwos)
+    else:
+        ret2[2] = 0
+
+
+    if countThrees > 0:
+        ret2[3] = mapping[3] / float(countThrees)
+    else:
+        ret2[3] = 0
 
     print(ret2)
 

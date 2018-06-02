@@ -1,14 +1,13 @@
 import numpy as np
 import keras
-import math
-import random
 
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten, MaxPooling1D, Convolution1D
 from keras.regularizers import L1L2
 
-from utilities import setupTrain
-from utilities import model_utilities
+from utilities import data_collector
+from utilities import assign_data
+from utilities import transform_to_train_vec
 
 # index 93 is ema_CALM
 EMA_INDEX = 93
@@ -24,22 +23,22 @@ def regression_participant_independent(csv, trainingid, validationid, testingid,
     Y_test = []
 
     for i in range(totalDays - 1, len(csv)):
-        days = setupTrain.collectDayData(csv, i, totalDays)
+        days = data_collector.collectDayData(csv, i, totalDays)
 
-        if setupTrain.isSameUserAcross(days):
-            x = setupTrain.transform_into_x_feature(
+        if data_collector.isSameUserAcross(days):
+            x = transform_to_train_vec.transform(
                 days,
                 True,
                 "simpleNN",
                 totalDays,
-                "z-score",
+                normalizerMethod,
                 normalizer1,
                 normalizer2
             )
 
             # put the x vector into the appropriate set (i.e. training, validation, testing)
             if days[0][EMA_INDEX] != '':
-                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_independent(
+                X_train, Y_train, X_val, Y_val, X_test, Y_test = assign_data.independent_assign(
                     False,
                     days[0][1],
                     trainingid,
@@ -75,7 +74,7 @@ def regression_participant_independent(csv, trainingid, validationid, testingid,
 
 
 
-def regression_participant_dependent(csv, normalizerMethod, normalizer1, normalizer2, totalDays):
+def regression_participant_dependent(csv, normalizerMethod, normalizer1, normalizer2, totalDays, leave_one_patient):
     X_train = []
     Y_train = []
 
@@ -87,21 +86,23 @@ def regression_participant_dependent(csv, normalizerMethod, normalizer1, normali
 
 
     for i in range(totalDays - 1, len(csv)):
-        days = setupTrain.collectDayData(csv, i, totalDays)
+        days = data_collector.collectDayData(csv, i, totalDays)
 
-        if setupTrain.isSameUserAcross(days):
-            x = setupTrain.transform_into_x_feature(
+        userid = days[0][1]
+
+        if data_collector.isSameUserAcross(days):
+            x = transform_to_train_vec.transform(
                 days,
                 True,
                 "simpleNN",
                 totalDays,
-                "z-score",
+                normalizerMethod,
                 normalizer1,
                 normalizer2
             )
 
             if days[0][EMA_INDEX] != '':
-                X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_dependent(
+                X_train, Y_train, X_val, Y_val, X_test, Y_test = assign_data.dependent_assign(
                     False,
                     0.60,
                     0.75,
@@ -112,7 +113,9 @@ def regression_participant_dependent(csv, normalizerMethod, normalizer1, normali
                     X_test,
                     Y_test,
                     x,
-                    days[0][EMA_INDEX]
+                    days[0][EMA_INDEX],
+                    leave_one_patient,
+                    userid
                 )
 
 
@@ -129,5 +132,4 @@ def regression_participant_dependent(csv, normalizerMethod, normalizer1, normali
     model.fit(X_train, Y_train, epochs=15,  validation_data=(X_val, Y_val))
 
     y_pred = model.predict(X_test)
-    print(y_pred[:10])
     return y_pred, Y_test
