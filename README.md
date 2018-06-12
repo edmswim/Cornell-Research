@@ -16,4 +16,4 @@ python script.py **[arguments]**
 
 
 ### Examples ###
-python script.py --task classify --model lstm --participantIndependent True --totalDays 8 --normalize z-score --leave_one_patient False
+python script.py --task classify --model lstm --participantDependent True --totalDays 8 --normalize z-score --leave_one_patient False

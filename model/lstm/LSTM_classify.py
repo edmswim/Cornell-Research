@@ -104,33 +104,6 @@ def classify_participant_dependent(csv, normalizer_type, normalizer1, normalizer
             )
 
 
-
-
-
-            # x_3_days = setupTrain.transform_into_x_feature(
-            #     days,
-            #     False,
-            #     "LSTM",
-            #     4,
-            #     "z-score",
-            #     normalizer1,
-            #     normalizer2
-            # )
-
-            # x_1_days = setupTrain.transform_into_x_feature(
-            #     days,
-            #     False,
-            #     "LSTM",
-            #     2,
-            #     "z-score",
-            #     normalizer1,
-            #     normalizer2
-            # )
-
-            # x_3_days = np.pad(x_3_days, ((0,0), (2,2), (0,0)), 'constant', constant_values = -1)
-            # x_1_days = np.pad(x_1_days, ((0,0), (3,3), (0,0)), 'constant', constant_values = -1)
-
-
             if days[0][EMA_INDEX] != '':
 
                 X_train, Y_train, X_val, Y_val, X_test, Y_test = assign_data.dependent_assign(
@@ -152,46 +125,10 @@ def classify_participant_dependent(csv, normalizer_type, normalizer1, normalizer
 
 
 
-
-                # X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_dependent(
-                #     True,
-                #     1,
-                #     1,
-                #     X_train,
-                #     Y_train,
-                #     X_val,
-                #     Y_val,
-                #     X_test,
-                #     Y_test,
-                #     x_3_days,
-                #     days[0][EMA_INDEX],
-                #     leave_one_patient,
-                #     userid
-                # )
-
-                # X_train, Y_train, X_val, Y_val, X_test, Y_test = setupTrain.collect_train_val_test_dependent(
-                #     True,
-                #     1,
-                #     1,
-                #     X_train,
-                #     Y_train,
-                #     X_val,
-                #     Y_val,
-                #     X_test,
-                #     Y_test,
-                #     x_1_days,
-                #     days[0][EMA_INDEX],
-                #     leave_one_patient,
-                #     userid
-                # )
-
-    print(X_test.shape)
-
-
     model = Sequential()
-    model.add(Bidirectional(LSTM(150, return_sequences=False, recurrent_dropout=0.1), input_shape=(len(X_train[0]), len(X_train[0][0]))))
+    model.add(Bidirectional(LSTM(150, return_sequences=False, recurrent_dropout=0.2, bias_initializer = keras.initializers.Constant(value=0.15)), input_shape=(len(X_train[0]), len(X_train[0][0]))))
     model.add(Dense(4, activation='softmax', kernel_regularizer=L1L2(l1=0.0, l2=0.0)))
-    model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['categorical_accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
 
 
     if leave_one_patient is None:
